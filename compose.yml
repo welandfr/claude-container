@@ -1,0 +1,21 @@
+services:
+  claude:
+    build: .
+    image: claude-code:latest
+    container_name: claude-code
+
+    working_dir: /workspace
+
+    volumes:
+      - ./project:/workspace
+
+    stdin_open: true
+    tty: true
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+    restart: unless-stopped
