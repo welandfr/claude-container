@@ -2,6 +2,7 @@ FROM node:22-bookworm-slim
 
 USER root
 
+# Install tools commonly used for development
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     openssh-client \
