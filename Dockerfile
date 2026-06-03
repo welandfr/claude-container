@@ -27,6 +27,10 @@ RUN npm install -g @anthropic-ai/claude-code
 # Make Python command available
 RUN ln -sf /usr/bin/python3 /usr/local/bin/python
 
+# Shell convenience aliases. Written to /etc/bash.bashrc (system-wide, outside
+# the claude-home volume) so they survive the volume shadowing /home/node.
+RUN echo "alias ll='ls -lha'" >> /etc/bash.bashrc
+
 # Status line: canonical copy lives outside the ~/.claude volume; the entrypoint
 # seeds it into the volume on first run (see entrypoint.sh).
 COPY statusline.sh /opt/claude/statusline.sh
