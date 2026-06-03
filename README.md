@@ -1,4 +1,4 @@
-# claude-container
+# Containerized Claude Code
 
 Run Claude Code inside a Docker container, isolated from the rest of your machine. The container can only see the directory you launch it from.
 
@@ -19,7 +19,8 @@ alias claude-code='docker run --rm -it \
 	-v "$PWD:/workspace" \
 	-v claude-home:/home/node \
 	-w /workspace \
-	-p 127.0.0.1:3000:3000 -p 127.0.0.1:8000:8000 \
+	-p 127.0.0.1:3000:3000 \
+	-p 127.0.0.1:8000:8000 \
 	claude-code:latest'
 ```
 **Note:** The `-p` flags publish ports so you can reach dev servers running *inside* the container from your browser (e.g. a Node app on 3000, an API on 8000) — without them, those ports stay trapped in the container. They're bound to `127.0.0.1` so the services are reachable only from your own machine, not the local network. **Add or change ports to match what your projects use.**
