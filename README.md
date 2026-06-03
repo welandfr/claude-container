@@ -1,49 +1,42 @@
 # claude-container
 
-Run Claude Code isolated in a container. It will only have access to the current working directory.
+Run Claude Code inside a Docker container, isolated from the rest of your machine. The container can only see the directory you launch it from.
 
-> **Security:** The entire isolation boundary is determined by which directory you are in when you run the alias. Never invoke from `$HOME` or any directory that contains sensitive files (credentials, SSH keys, etc.). Only invoke from a dedicated project directory.
+> **Security:** The directory you start in is the *only* thing the container can access. Never launch from `$HOME` or any folder holding credentials, SSH keys, or other secrets — launch from a dedicated project directory.
 
-## Usage: Build image once, then use docker-command (alias)
+## Setup
+
+**1. Build the image** (run once, from the folder containing the `Dockerfile`):
 
 ```sh
-# In the same folder as the Dockerfile:
 docker build -t claude-code:latest .
 ```
-Create this alias in `.bashrc` or `.zshrc` or similar (modify or add ports as needed): 
+
+**2. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent:
+
 ```sh
 alias claude-code='docker run --rm -it \
 	-v "$PWD:/workspace" \
 	-v claude-home:/home/node \
+	-w /workspace \
 	-p 127.0.0.1:3000:3000 -p 127.0.0.1:8000:8000 \
-	-w /workspace claude-code:latest'
-
+	claude-code:latest'
 ```
+**Note:** The `-p` flags publish ports so you can reach dev servers running *inside* the container from your browser (e.g. a Node app on 3000, an API on 8000) — without them, those ports stay trapped in the container. They're bound to `127.0.0.1` so the services are reachable only from your own machine, not the local network. **Add or change ports to match what your projects use.**
 
-## Status line
+Reload your shell (or `source` the file).
 
-The image ships a status line that shows the model, context usage, and your
-Claude.ai 5-hour / 7-day limit usage:
+## Usage
 
+`cd` into a project and run:
+
+```sh
+claude-code
 ```
-Opus 4.8 | Context: 84K/200K (42%) | 5h: 31% | 7d: 12%
-```
-
-`statusline.sh` is the canonical script (a `jq` one-liner that reads the status
-JSON Claude Code sends on stdin). Because the `claude-home` volume shadows
-`/home/node`, the script is baked into the image at `/opt/claude/statusline.sh`
-and `entrypoint.sh` copies it into `~/.claude/statusline.sh` and registers it in
-`~/.claude/settings.json` on first run. It then persists in the volume across
-sessions, and you can edit your copy there freely (it won't be overwritten).
-
-The `5h` / `7d` figures only appear for Claude.ai subscription logins, after the
-first API response of the session.
 
 ## Updates
 
-Claude Code is pinned to the version installed into the image via `npm`. It will
-notify you in-session when a newer version is available. To update, rebuild the
-image:
+Claude Code is pinned to the version baked into the image and will tell you in-session when a newer one is out. To update, `cd` back into the folder containing the `Dockerfile` and rebuild the image:
 
 ```sh
 docker build -t claude-code:latest .
