@@ -16,8 +16,9 @@ cd claude-container
 
 **2. Build the image**
 
+```sh
 docker build -t claude-code:latest .
-
+```
 
 **3. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent:
 
@@ -30,7 +31,7 @@ alias claude-code='docker run --rm -it \
 	-p 127.0.0.1:8000:8000 \
 	claude-code:latest'
 ```
-**Note:** The `-p` flags publish ports so you can reach dev servers running *inside* the container from your browser (e.g. a Node app on 3000, an API on 8000) — without them, those ports stay trapped in the container. They're bound to `127.0.0.1` so the services are reachable only from your own machine, not the local network. **Add or change ports to match what your projects use.**
+**Note:** The `-p` flags publish ports so you can reach dev servers running *inside* the container from your browser (e.g. a Node app on 3000, a FastAPI on 8000). They're bound to `127.0.0.1` so the services are reachable only from your own machine, not the local network. **Add or change ports to match what your projects use.**
 
 Reload your shell (or `source` the file) to activate the alias.
 
