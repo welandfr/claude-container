@@ -8,7 +8,30 @@
       "Bash(bash -n /workspace/statusline.sh)",
       "Bash(bash -n /workspace/entrypoint.sh)",
       "Bash(echo \"=== exit: $? ===\")",
-      "Read(//home/node/**)"
+      "Read(//home/node/**)",
+      "Bash(npm --version)",
+      "Bash(/usr/local/bin/claude --version)",
+      "Bash(/home/node/.local/bin/claude --version)",
+      "Read(//usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/**)",
+      "Bash(npm ls *)",
+      "Bash(bash -ic 'which claude; echo PATH=$PATH')",
+      "Bash(bash -lc 'which claude')",
+      "Bash(cp /workspace/statusline.sh /home/node/.claude/statusline.sh)",
+      "Bash(chmod +x /home/node/.claude/statusline.sh)",
+      "Bash(/home/node/.claude/statusline.sh)",
+      "Bash(git *)",
+      "Bash(/opt/claude/statusline.sh)",
+      "Read(//tmp/**)",
+      "Bash(bash -n statusline.sh)",
+      "Bash(cp statusline.sh /opt/claude/statusline.sh)",
+      "Bash(cp --remove-destination statusline.sh /home/node/.claude/statusline.sh)",
+      "Bash(cp /home/node/.claude/statusline.sh /tmp/statusline.bak)",
+      "Bash(awk '1;/^input=\\\\$\\\\\\(cat\\\\\\)$/{print \"printf '\\\\''%s'\\\\'' \\\\\"$input\\\\\" > /tmp/statusline_input.json\"}' /tmp/statusline.bak)",
+      "Bash(touch /opt/claude/.wtest)",
+      "Bash(rm -f /opt/claude/.wtest)",
+      "Bash(jq --version)",
+      "Bash(bash /workspace/statusline.sh)",
+      "Read(//usr/local/lib/node_modules/@anthropic-ai/claude-code/**)"
     ]
   }
 }

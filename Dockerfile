@@ -32,7 +32,7 @@ RUN ln -sf /usr/bin/python3 /usr/local/bin/python
 RUN echo "alias ll='ls -lha'" >> /etc/bash.bashrc
 
 # Status line: canonical copy lives outside the ~/.claude volume; the entrypoint
-# seeds it into the volume on first run (see entrypoint.sh).
+# symlinks it into the volume on every run (see entrypoint.sh).
 COPY statusline.sh /opt/claude/statusline.sh
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /opt/claude/statusline.sh /usr/local/bin/entrypoint.sh

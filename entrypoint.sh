@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Container entrypoint: seed the persisted ~/.claude volume with the status line,
+# Container entrypoint: link the persisted ~/.claude volume to the status line,
 # then hand off to Claude Code.
 #
 # ~/.claude is the `claude-home` Docker volume, which shadows anything baked into
-# the image at that path. So the canonical statusline.sh ships in the image at
-# /opt/claude and is copied into the volume on first run; later runs leave the
-# user's (possibly edited) copy untouched.
+# the image at that path. The canonical statusline.sh ships in the image at
+# /opt/claude; the volume gets a symlink to it, refreshed on every run, so an
+# image rebuild propagates to all containers immediately. The script is
+# maintained in the repo and rebuilt — in-volume edits are not persisted.
 set -e
 
 CLAUDE_DIR="$HOME/.claude"
@@ -14,11 +15,10 @@ STATUSLINE="$CLAUDE_DIR/statusline.sh"
 
 mkdir -p "$CLAUDE_DIR"
 
-# Seed the status line script if the volume doesn't have one yet.
-if [ ! -f "$STATUSLINE" ]; then
-  cp /opt/claude/statusline.sh "$STATUSLINE"
-  chmod +x "$STATUSLINE"
-fi
+# Point the volume's status line at the canonical copy baked into the image.
+# Re-created every run so image rebuilds take effect without a stale per-volume
+# copy. Replaces any pre-existing real file left by older image versions.
+ln -sfn /opt/claude/statusline.sh "$STATUSLINE"
 
 # Register the status line in settings.json without clobbering other settings.
 if [ ! -f "$SETTINGS" ]; then
