@@ -2,6 +2,8 @@
 
 Run Claude Code inside a Docker container, isolated from the rest of your machine. The container can only see the directory you launch it from.
 
+These instructions work on Linux but the basic idea should be applicable to Windows/Mac as well.
+
 > **Security:** The directory you start in is the *only* thing the container can access. Never launch from `$HOME` or any folder holding credentials, SSH keys, or other secrets — launch from a dedicated project directory.
 
 ## Setup
@@ -30,7 +32,7 @@ alias claude-code='docker run --rm -it \
 ```
 **Note:** The `-p` flags publish ports so you can reach dev servers running *inside* the container from your browser (e.g. a Node app on 3000, an API on 8000) — without them, those ports stay trapped in the container. They're bound to `127.0.0.1` so the services are reachable only from your own machine, not the local network. **Add or change ports to match what your projects use.**
 
-Reload your shell (or `source` the file).
+Reload your shell (or `source` the file) to activate the alias.
 
 ## Usage
 
