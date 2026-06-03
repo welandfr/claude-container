@@ -7,7 +7,7 @@ These instructions work on Linux but the basic idea should be applicable to Wind
 > **Security:** The directory you start in is the *only* thing the container can access. Never launch from `$HOME` or any folder holding credentials, SSH keys, or other secrets — launch from a dedicated project directory.
 
 ## Setup
-**1. Clone this repo** and `cd' into it.
+**1. Clone this repo** and `cd into it.
 
 ```sh
 git clone https://github.com/welandfr/claude-container
