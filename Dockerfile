@@ -31,9 +31,10 @@ RUN ln -sf /usr/bin/python3 /usr/local/bin/python
 # the claude-home volume) so they survive the volume shadowing /home/node.
 RUN echo "alias ll='ls -lha'" >> /etc/bash.bashrc
 
-# Status line: canonical copy lives outside the ~/.claude volume; the entrypoint
-# symlinks it into the volume on every run (see entrypoint.sh).
+# Status line and global CLAUDE.md: canonical copies live outside the ~/.claude
+# volume; the entrypoint symlinks them into the volume on every run (see entrypoint.sh).
 COPY statusline.sh /opt/claude/statusline.sh
+COPY CLAUDE.global.md /opt/claude/CLAUDE.md
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /opt/claude/statusline.sh /usr/local/bin/entrypoint.sh
 

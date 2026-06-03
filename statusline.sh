@@ -74,11 +74,11 @@ out=$(printf '%s' "$input" | jq -r --arg e "$esc" '
       + " (" + usage_c($cpct) + ($cpct | pct) + "%" + R + ")"
     + (if $h5 != null then
         $sep + "5h: " + usage_c($h5) + ($h5 | pct) + "%" + R
-        + (if $h5r != null then dim_c + " ↻" + ($h5r | fmt_remaining) + R else "" end)
+        + (if $h5r != null then dim_c + " ↻ " + ($h5r | fmt_remaining) + R else "" end)
       else "" end)
     + (if $d7 != null then
         $sep + "7d: " + usage_c($d7) + ($d7 | pct) + "%" + R
-        + (if $d7r != null then dim_c + " ↻" + ($d7r | fmt_remaining) + R else "" end)
+        + (if $d7r != null then dim_c + " ↻ " + ($d7r | fmt_remaining) + R else "" end)
       else "" end)
 ' 2>/dev/null)
 

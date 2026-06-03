@@ -45,6 +45,10 @@ When you have the alias working, just `cd` into a project directory and run `cla
 my-project$ claude-code
 ```
 
+## Global Claude instructions
+
+`CLAUDE.global.md` in this repo is baked into the image and applied to every project as Claude's global `~/.claude/CLAUDE.md`. Edit it here and rebuild to update your preferences across all projects and machines.
+
 ## Updates
 
 Claude Code is pinned to the version baked into the image and will tell you in-session when a newer one is out. To update, `cd` back into this repo folder `claude-container` and rebuild the image:
