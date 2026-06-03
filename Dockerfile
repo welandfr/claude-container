@@ -33,11 +33,6 @@ COPY statusline.sh /opt/claude/statusline.sh
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /opt/claude/statusline.sh /usr/local/bin/entrypoint.sh
 
-# Prefer a self-updating native install living on the claude-home volume
-# (~/.local/bin) over the npm copy baked into the image. The npm copy stays as a
-# bootstrap: the entrypoint runs `claude install` on a fresh volume, after which
-# this PATH entry makes the persisted, self-updating binary win.
-ENV PATH=/home/node/.local/bin:$PATH
 
 WORKDIR /workspace
 

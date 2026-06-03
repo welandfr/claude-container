@@ -31,12 +31,4 @@ if ! jq -e '.statusLine' "$SETTINGS" >/dev/null 2>&1; then
      "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
 fi
 
-# Bootstrap a self-updating native install into the volume on first run, using
-# the npm copy baked into the image. Once present, PATH (set in the Dockerfile)
-# makes ~/.local/bin/claude win and it keeps itself updated. Non-fatal if the
-# install can't reach the network — we just fall back to the npm copy.
-if [ ! -x "$HOME/.local/bin/claude" ]; then
-  claude install >/dev/null 2>&1 || true
-fi
-
 exec claude "$@"

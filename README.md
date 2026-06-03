@@ -2,6 +2,8 @@
 
 Run Claude Code isolated in a container. It will only have access to the current working directory.
 
+> **Security:** The entire isolation boundary is determined by which directory you are in when you run the alias. Never invoke from `$HOME` or any directory that contains sensitive files (credentials, SSH keys, etc.). Only invoke from a dedicated project directory.
+
 ## Usage: Build image once, then use docker-command (alias)
 
 ```sh
@@ -13,7 +15,7 @@ Create this alias in `.bashrc` or `.zshrc` or similar (modify or add ports as ne
 alias claude-code='docker run --rm -it \
 	-v "$PWD:/workspace" \
 	-v claude-home:/home/node \
-	-p 3000:3000 -p 8000:8000 \
+	-p 127.0.0.1:3000:3000 -p 127.0.0.1:8000:8000 \
 	-w /workspace claude-code:latest'
 
 ```
@@ -39,13 +41,10 @@ first API response of the session.
 
 ## Updates
 
-Claude Code is installed into the image via `npm`, but `/usr/local` is owned by
-root and isn't on the `claude-home` volume, so it can't auto-update in place. To
-get self-updating that *persists* across sessions, the entrypoint runs
-`claude install` on first run, which puts a native install under
-`~/.local/bin` (on the volume). The Dockerfile puts `~/.local/bin` ahead of the
-npm copy on `PATH`, so that persisted, self-updating binary is the one that runs;
-the npm copy only serves to bootstrap a fresh volume.
+Claude Code is pinned to the version installed into the image via `npm`. It will
+notify you in-session when a newer version is available. To update, rebuild the
+image:
 
-To pin a specific version instead, rebuild the image (`docker build` reinstalls
-the latest from npm) and remove the `claude install` step from `entrypoint.sh`.
+```sh
+docker build -t claude-code:latest .
+```
