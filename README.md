@@ -5,14 +5,19 @@ Run Claude Code inside a Docker container, isolated from the rest of your machin
 > **Security:** The directory you start in is the *only* thing the container can access. Never launch from `$HOME` or any folder holding credentials, SSH keys, or other secrets — launch from a dedicated project directory.
 
 ## Setup
-
-**1. Build the image** (run once, from the folder containing the `Dockerfile`):
+**1. Clone this repo** and `cd' into it.
 
 ```sh
-docker build -t claude-code:latest .
+git clone https://github.com/welandfr/claude-container
+cd claude-container
 ```
 
-**2. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent:
+**2. Build the image**
+
+docker build -t claude-code:latest .
+
+
+**3. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent:
 
 ```sh
 alias claude-code='docker run --rm -it \
@@ -29,15 +34,15 @@ Reload your shell (or `source` the file).
 
 ## Usage
 
-`cd` into a project and run:
+When you have the alias working, just `cd` into a project directory and run `claude-code`:
 
 ```sh
-claude-code
+my-project$ claude-code
 ```
 
 ## Updates
 
-Claude Code is pinned to the version baked into the image and will tell you in-session when a newer one is out. To update, `cd` back into the folder containing the `Dockerfile` and rebuild the image:
+Claude Code is pinned to the version baked into the image and will tell you in-session when a newer one is out. To update, `cd` back into this repo folder `claude-container` and rebuild the image:
 
 ```sh
 docker build -t claude-code:latest .
