@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude --version)",
+      "Bash(npm root *)",
+      "Read(//home/node/.claude/**)",
+      "Bash(chmod +x statusline.sh)",
+      "Bash(./statusline.sh)",
+      "Bash(bash -n /workspace/statusline.sh)",
+      "Bash(bash -n /workspace/entrypoint.sh)",
+      "Bash(claude install *)",
+      "Bash(echo \"=== exit: $? ===\")",
+      "Read(//home/node/.local/bin/**)",
+      "Read(//home/node/.local/share/**)",
+      "Bash(/home/node/.local/bin/claude --version)",
+      "Read(//home/node/**)",
+      "Bash(printf '\\\\n# Prefer the self-updating native Claude Code install on the volume\\\\nexport PATH=\"$HOME/.local/bin:$PATH\"\\\\n')"
+    ]
+  }
+}
