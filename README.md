@@ -20,12 +20,21 @@ cd claude-container
 docker build -t claude-code:latest .
 ```
 
-**3. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent:
+**3. Create the inbox directory**
+
+```sh
+mkdir -p ~/claude-inbox
+```
+
+A shared file drop zone — drop screenshots, logs, or other files there and Claude will find them when you say "look at my screenshot" or similar. Docker auto-creates bind-mount directories on first run, but does so as root — pre-creating it ensures it's owned by you.
+
+**4. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent:
 
 ```sh
 alias claude='docker run --rm -it \
 	-v "$PWD:/workspace" \
 	-v claude-home:/home/node \
+	-v ~/claude-inbox:/home/node/claude-inbox \
 	-w /workspace \
 	-p 127.0.0.1:3000:3000 \
 	-p 127.0.0.1:8000:8000 \
@@ -34,8 +43,6 @@ alias claude='docker run --rm -it \
 **Note:** The `-p` flags publish ports so you can reach dev servers running *inside* the container from your browser (e.g. a Node app on 3000, a FastAPI on 8000). They're bound to `127.0.0.1` so the services are reachable only from your own machine, not the local network. **Add or change ports to match what your projects use.**
 
 **Note:** The `claude-home` is a shared Docker volume in which Claude can store its environment and avoid having to log in again on every container start.
-
-**Note:** To enable a shared file drop zone, create `~/claude-inbox` on your host and add `-v ~/claude-inbox:/home/node/claude-inbox \` to the alias (before `claude-code:latest`). Drop screenshots, logs, or other files there and Claude will find them when you say "look at my screenshot" or similar.
 
 Reload your shell (or `source` the file) to activate the alias.
 
