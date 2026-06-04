@@ -23,7 +23,7 @@ docker build -t claude-code:latest .
 **3. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent:
 
 ```sh
-alias claude-code='docker run --rm -it \
+alias claude='docker run --rm -it \
 	-v "$PWD:/workspace" \
 	-v claude-home:/home/node \
 	-w /workspace \
@@ -39,10 +39,10 @@ Reload your shell (or `source` the file) to activate the alias.
 
 ## Usage
 
-When you have the alias working, just `cd` into a project directory and run `claude-code`:
+When you have the alias working, just `cd` into a project directory and run `claude`:
 
 ```sh
-my-project$ claude-code
+my-project$ claude
 ```
 
 ## Global Claude instructions
