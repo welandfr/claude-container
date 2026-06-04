@@ -33,7 +33,9 @@ alias claude='docker run --rm -it \
 ```
 **Note:** The `-p` flags publish ports so you can reach dev servers running *inside* the container from your browser (e.g. a Node app on 3000, a FastAPI on 8000). They're bound to `127.0.0.1` so the services are reachable only from your own machine, not the local network. **Add or change ports to match what your projects use.**
 
-**Note:** The `claude-home` is a shared Docker volume in which Claude can store it's environment and avoid having to log in again on every container start.
+**Note:** The `claude-home` is a shared Docker volume in which Claude can store its environment and avoid having to log in again on every container start.
+
+**Note:** To enable a shared file drop zone, create `~/claude-inbox` on your host and add `-v ~/claude-inbox:/home/node/claude-inbox \` to the alias (before `claude-code:latest`). Drop screenshots, logs, or other files there and Claude will find them when you say "look at my screenshot" or similar.
 
 Reload your shell (or `source` the file) to activate the alias.
 

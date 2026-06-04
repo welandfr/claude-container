@@ -14,11 +14,7 @@ Do not write or edit any code until you have 95% confidence in what needs to be 
 
 ## User uploads
 
-When the user refers to a screenshot, image, file, or upload without specifying a path, look in `.claude/inbox/` and use the most recently modified file there.
-
-## Project initialization
-
-When running `/init` in a project, also create `.claude/inbox/` if it doesn't already exist. This is the designated drop zone for files (screenshots, logs, etc.) the user wants to share with Claude during the session.
+When the user refers to a screenshot, image, file, or upload without specifying a path, look in `~/claude-inbox/` and use the most recently modified file there.
 
 ## Runtime environment
 
