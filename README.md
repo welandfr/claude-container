@@ -32,7 +32,8 @@ A shared file drop zone — drop screenshots, logs, or other files there and Cla
 
 ```sh
 alias claude='docker run --rm -it \
-	-v "$PWD:/workspace" \
+	--name claude-container \
+	-v "$PWD:/workspace:z" \
 	-v claude-home:/home/node \
 	-v ~/claude-inbox:/home/node/claude-inbox \
 	-w /workspace \
@@ -52,6 +53,11 @@ When you have the alias working, just `cd` into a project directory and run `cla
 
 ```sh
 my-project$ claude
+```
+To attach a shell to the running container:
+
+```sh
+docker exec -it claude-container /bin/bash
 ```
 
 ## Global Claude instructions
