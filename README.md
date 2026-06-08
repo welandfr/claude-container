@@ -46,11 +46,17 @@ Reload your shell (or `source` the file) to activate the alias.
 
 ---
 
-### Windows
+### Windows (PowerShell)
 
 Requires Docker Desktop with the WSL2 backend enabled.
 
 **1. Clone and build** — same as above. Use the `docker build` command directly; the build script requires a bash shell.
+
+```powershell
+git clone https://github.com/welandfr/claude-container
+cd claude-container
+docker build -t claude-code:latest .
+```
 
 **2. Create `claude.bat`** and save it somewhere on your PATH. A good location that requires no admin access and is already on PATH on Windows 10/11:
 
