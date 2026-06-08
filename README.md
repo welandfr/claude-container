@@ -46,28 +46,35 @@ Reload your shell (or `source` the file) to activate the alias.
 
 ---
 
-### Windows (PowerShell)
+### Windows
 
 Requires Docker Desktop with the WSL2 backend enabled.
 
-**1. Clone and build** — same as above. The build script won't run in PowerShell; use the `docker build` command directly.
+**1. Clone and build** — same as above. Use the `docker build` command directly; the build script requires a bash shell.
 
-**2. Add a function** to your PowerShell profile (`$PROFILE`):
+**2. Create `claude.bat`** and save it somewhere on your PATH. A good location that requires no admin access and is already on PATH on Windows 10/11:
 
 ```powershell
-function claude {
-    docker run --rm -it `
-        --name claude-container `
-        -v "${PWD}:/workspace" `
-        -v claude-home:/home/node `
-        -w /workspace `
-        -p 127.0.0.1:3000:3000 `
-        -p 127.0.0.1:8000:8000 `
-        claude-code:latest
-}
+notepad $env:USERPROFILE\AppData\Local\Microsoft\WindowsApps\claude.bat
 ```
 
-Reload your profile (`. $PROFILE`) to activate it.
+Or create a personal scripts folder (e.g. `%USERPROFILE%\bin`), add it to your user PATH via *Settings → System → About → Advanced system settings → Environment Variables*, and place the file there.
+
+Contents of `claude.bat`:
+
+```bat
+@echo off
+docker run --rm -it ^
+    --name claude-container ^
+    -v "%CD%:/workspace" ^
+    -v claude-home:/home/node ^
+    -w /workspace ^
+    -p 127.0.0.1:3000:3000 ^
+    -p 127.0.0.1:8000:8000 ^
+    claude-code:latest
+```
+
+Open a new terminal and `claude` will work from any directory.
 
 ---
 
