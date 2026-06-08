@@ -9,6 +9,15 @@
 # maintained in the repo and rebuilt — in-volume edits are not persisted.
 set -e
 
+# Confirm the mounted directory with the user before handing off to Claude.
+if [ -t 0 ]; then
+  printf 'The current working directory will be accessible by Claude. Continue? [Y/n] '
+  read -r reply
+  case "$reply" in
+    [Nn]*) echo "Aborted."; exit 1 ;;
+  esac
+fi
+
 CLAUDE_DIR="$HOME/.claude"
 SETTINGS="$CLAUDE_DIR/settings.json"
 STATUSLINE="$CLAUDE_DIR/statusline.sh"
