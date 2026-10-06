@@ -31,7 +31,8 @@
       "Bash(rm -f /opt/claude/.wtest)",
       "Bash(jq --version)",
       "Bash(bash /workspace/statusline.sh)",
-      "Read(//usr/local/lib/node_modules/@anthropic-ai/claude-code/**)"
+      "Read(//usr/local/lib/node_modules/@anthropic-ai/claude-code/**)",
+      "Read(//opt/claude/**)"
     ]
   }
 }

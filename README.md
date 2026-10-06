@@ -29,17 +29,10 @@ Or use the included build script:
 ./build.sh
 ```
 
-**3. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent:
+**3. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent, pointing at the launcher script in this repo:
 
 ```sh
-alias claude='docker run --rm -it \
-	--name claude-container \
-	-v "$PWD:/workspace:z" \
-	-v claude-home:/home/node \
-	-w /workspace \
-	-p 127.0.0.1:3000:3000 \
-	-p 127.0.0.1:8000:8000 \
-	claude-code:latest'
+alias claude='/path/to/claude-container/claude-run.sh'
 ```
 
 Reload your shell (or `source` the file) to activate the alias.
@@ -58,26 +51,20 @@ cd claude-container
 docker build -t claude-code:latest .
 ```
 
-**2. Create `claude.bat`** and save it somewhere on your PATH. A good location that requires no admin access and is already on PATH on Windows 10/11:
+**2. Add a function to your PowerShell profile** pointing at `claude.ps1` in this repo:
 
 ```powershell
-notepad $env:USERPROFILE\AppData\Local\Microsoft\WindowsApps\claude.bat
+notepad $PROFILE
 ```
 
-Or create a personal scripts folder (e.g. `%USERPROFILE%\bin`), add it to your user PATH via *Settings → System → About → Advanced system settings → Environment Variables*, and place the file there.
+```powershell
+function claude { & "C:\path\to\claude-container\claude.ps1" @args }
+```
 
-Contents of `claude.bat`:
+If the script is blocked when you first run it, allow local scripts for your user:
 
-```bat
-@echo off
-docker run --rm -it ^
-    --name claude-container ^
-    -v "%CD%:/workspace" ^
-    -v claude-home:/home/node ^
-    -w /workspace ^
-    -p 127.0.0.1:3000:3000 ^
-    -p 127.0.0.1:8000:8000 ^
-    claude-code:latest
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 Open a new terminal and `claude` will work from any directory.
@@ -90,15 +77,49 @@ Open a new terminal and `claude` will work from any directory.
 
 ```sh
 my-project$ claude
+claude: claude-my-project  ports: 3000->3000 8000->8000
 ```
 
-To attach a shell to the running container:
+Any arguments are passed through to Claude Code inside the container (`claude --resume`, `claude -p "..."`, and so on).
+
+### Running several instances at once
+
+Open a new terminal, `cd` into another project, and run `claude` again — the launcher keeps instances from colliding:
+
+- **Container name** is derived from the directory (`claude-my-project`), with `-2`, `-3`, … appended if that name is already running.
+- **Host ports** are shifted to the next free block. Inside the container your dev server still listens on 3000; the host reaches the second instance on 3001, the third on 3002, and so on. The mapping is printed on startup.
 
 ```sh
-docker exec -it claude-container /bin/bash
+proj-a$ claude
+claude: claude-proj-a  ports: 3000->3000 8000->8000
+
+proj-b$ claude
+claude: claude-proj-b  ports: 3001->3000 8001->8000
 ```
 
-**Note:** The `-p` flags publish ports so you can reach dev servers running inside the container from your browser (e.g. a Node app on 3000, a FastAPI on 8000). They're bound to `127.0.0.1` so the services are only reachable from your own machine. Add or change ports to match what your projects use.
+All instances share the `claude-home` volume, so they share one login and one set of settings — as parallel Claude Code sessions on a host do.
+
+### Attaching a shell
+
+List what's running, then exec into the one you want:
+
+```sh
+docker ps --format '{{.Names}}\t{{.Ports}}'
+docker exec -it claude-my-project /bin/bash
+```
+
+### Ports
+
+The launcher publishes container ports 3000 and 8000 by default, bound to `127.0.0.1` so the services are only reachable from your own machine. Override per project or globally with environment variables:
+
+| Variable | Effect |
+| --- | --- |
+| `CLAUDE_PORTS` | Space-separated container ports to publish (default `"3000 8000"`), e.g. `CLAUDE_PORTS="5173 8080" claude` |
+| `CLAUDE_NO_PORTS=1` | Publish nothing |
+| `CLAUDE_PORT_OFFSET` | Pin the offset instead of searching for a free block |
+| `CLAUDE_NAME` | Pin the container name |
+| `CLAUDE_IMAGE` | Run a different image tag (default `claude-code:latest`) |
+| `CLAUDE_HOME_VOLUME` | Use a different volume for `~/.claude` (default `claude-home`) |
 
 **Note:** The `claude-home` volume persists Claude's environment (login session, settings) across container runs.
 
