@@ -4,8 +4,8 @@
 #   work · Opus 4.8 | Context: 84K/200K (42%) | 5h: 31% ↻2h15m | 7d: 12% ↻3d4h
 #
 # The leading account tag comes from CLAUDE_PROFILE in the *environment* (set by
-# claude-run.sh via `docker run -e`), not from the status JSON. It is omitted
-# when the variable is unset, which is the single-account default.
+# claude-run.sh via `docker run -e`), not from the status JSON. When the
+# variable is unset or empty (the single-account default) it reads "Default".
 #
 # Schema reference (claude --version 2.x): the JSON on stdin includes
 # .model.display_name, .context_window.{total_input_tokens,context_window_size,
@@ -23,7 +23,7 @@ esc=$(printf '\033')   # ESC byte for ANSI colors, injected into jq below
 # object so the baseline ("Claude | Context: ?/? (?%)") still renders.
 [ -z "${input//[[:space:]]/}" ] && input='{}'
 
-out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFILE:-}" '
+out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFILE:-Default}" '
   # ANSI helpers (status line is rendered dimmed by the terminal).
   def R: $e + "[0m";
   def model_c: $e + "[1;36m";   # bold cyan
@@ -74,8 +74,7 @@ out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFIL
   | (.rate_limits.five_hour.resets_at | parse_iso | if . then . - now | ceil else null end) as $h5r
   | (.rate_limits.seven_day.resets_at  | parse_iso | if . then . - now | ceil else null end) as $d7r
   | (sep_c + " | " + R) as $sep
-  |   (if $profile == "" then ""
-       else prof_c + $profile + R + sep_c + " · " + R end)
+  |   prof_c + $profile + R + sep_c + " · " + R
     + model_c + $m + R
     + $sep + "Context: " + ($used | k) + "/" + ($size | k)
       + " (" + usage_c($cpct) + ($cpct | pct) + "%" + R + ")"
@@ -97,8 +96,6 @@ if [ -z "$out" ]; then
   out="${esc}[1;36m${name}${esc}[0m"
   # Keep the account tag on this path too: it runs exactly when the payload is
   # unreadable, which is no reason to stop saying which account is in use.
-  if [ -n "${CLAUDE_PROFILE:-}" ]; then
-    out="${esc}[1;35m${CLAUDE_PROFILE}${esc}[0m${esc}[2m · ${esc}[0m${out}"
-  fi
+  out="${esc}[1;35m${CLAUDE_PROFILE:-Default}${esc}[0m${esc}[2m · ${esc}[0m${out}"
 fi
 printf '%s\n' "$out"

@@ -125,7 +125,7 @@ One profile name drives three things, so a session always says which account it 
 | --- | --- | --- |
 | Volume (the login) | `claude-home` | `claude-home-work` |
 | Container name | `claude-my-project` | `claude-work-my-project` |
-| Status line | `Opus 4.8 \| Context: …` | `work · Opus 4.8 \| Context: …` |
+| Status line | `Default · Opus 4.8 \| Context: …` | `work · Opus 4.8 \| Context: …` |
 
 ```sh
 my-project$ claude-work
