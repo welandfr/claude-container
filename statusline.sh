@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Claude Code status line.
 # Reads the status JSON from stdin and prints a single line, e.g.:
-#   Opus 4.8 | Context: 84K/200K (42%) | 5h: 31% ↻2h15m | 7d: 12% ↻3d4h
+#   work · Opus 4.8 | Context: 84K/200K (42%) | 5h: 31% ↻2h15m | 7d: 12% ↻3d4h
+#
+# The leading account tag comes from CLAUDE_PROFILE in the *environment* (set by
+# claude-run.sh via `docker run -e`), not from the status JSON. It is omitted
+# when the variable is unset, which is the single-account default.
 #
 # Schema reference (claude --version 2.x): the JSON on stdin includes
 # .model.display_name, .context_window.{total_input_tokens,context_window_size,
@@ -19,11 +23,12 @@ esc=$(printf '\033')   # ESC byte for ANSI colors, injected into jq below
 # object so the baseline ("Claude | Context: ?/? (?%)") still renders.
 [ -z "${input//[[:space:]]/}" ] && input='{}'
 
-out=$(printf '%s' "$input" | jq -r --arg e "$esc" '
+out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFILE:-}" '
   # ANSI helpers (status line is rendered dimmed by the terminal).
   def R: $e + "[0m";
   def model_c: $e + "[1;36m";   # bold cyan
   def sep_c:   $e + "[2m";      # dim
+  def prof_c:  $e + "[1;35m";   # bold magenta (account tag)
   def dim_c:   $e + "[2m";      # dim (for reset countdown)
   # Pick a color for a usage percentage: green < 70, yellow < 90, else red.
   def usage_c(p): if p == null then "" elif p >= 90 then $e + "[31m"
@@ -69,7 +74,9 @@ out=$(printf '%s' "$input" | jq -r --arg e "$esc" '
   | (.rate_limits.five_hour.resets_at | parse_iso | if . then . - now | ceil else null end) as $h5r
   | (.rate_limits.seven_day.resets_at  | parse_iso | if . then . - now | ceil else null end) as $d7r
   | (sep_c + " | " + R) as $sep
-  |   model_c + $m + R
+  |   (if $profile == "" then ""
+       else prof_c + $profile + R + sep_c + " · " + R end)
+    + model_c + $m + R
     + $sep + "Context: " + ($used | k) + "/" + ($size | k)
       + " (" + usage_c($cpct) + ($cpct | pct) + "%" + R + ")"
     + (if $h5 != null then
@@ -88,5 +95,10 @@ if [ -z "$out" ]; then
   name=$(printf '%s' "$input" | jq -r '.model.display_name // "Claude" | sub("^Claude "; "")' 2>/dev/null)
   [ -z "$name" ] && name="Claude"
   out="${esc}[1;36m${name}${esc}[0m"
+  # Keep the account tag on this path too: it runs exactly when the payload is
+  # unreadable, which is no reason to stop saying which account is in use.
+  if [ -n "${CLAUDE_PROFILE:-}" ]; then
+    out="${esc}[1;35m${CLAUDE_PROFILE}${esc}[0m${esc}[2m · ${esc}[0m${out}"
+  fi
 fi
 printf '%s\n' "$out"

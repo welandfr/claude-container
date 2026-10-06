@@ -97,7 +97,50 @@ proj-b$ claude
 claude: claude-proj-b  ports: 3001->3000 8001->8000
 ```
 
-All instances share the `claude-home` volume, so they share one login and one set of settings — as parallel Claude Code sessions on a host do.
+All instances share the `claude-home` volume, so they share one login and one set of settings — as parallel Claude Code sessions on a host do. To run two different Claude accounts side by side instead, see below.
+
+### Using more than one Claude account
+
+The login lives in `~/.claude/.credentials.json`, inside the `claude-home` volume — so a different volume is a different account. Set `CLAUDE_PROFILE` and give each account its own alias:
+
+```sh
+alias claude='/path/to/claude-container/claude-run.sh'
+alias claude-work='CLAUDE_PROFILE=work /path/to/claude-container/claude-run.sh'
+```
+
+PowerShell takes a function rather than an alias, since the variable has to be set before the call:
+
+```powershell
+function claude      { & "C:\path\to\claude-container\claude.ps1" @args }
+function claude-work {
+    $env:CLAUDE_PROFILE = 'work'
+    try { & "C:\path\to\claude-container\claude.ps1" @args }
+    finally { Remove-Item Env:\CLAUDE_PROFILE }
+}
+```
+
+One profile name drives three things, so a session always says which account it belongs to:
+
+| | `claude` | `claude-work` |
+| --- | --- | --- |
+| Volume (the login) | `claude-home` | `claude-home-work` |
+| Container name | `claude-my-project` | `claude-work-my-project` |
+| Status line | `Opus 4.8 \| Context: …` | `work · Opus 4.8 \| Context: …` |
+
+```sh
+my-project$ claude-work
+claude: claude-work-my-project  ports: 3001->3000 8001->8000
+        volume: claude-home-work
+```
+
+The first `claude-work` run starts on an empty volume and asks you to log in; after that the session persists like any other. Your default `claude` login is untouched, and the two can run side by side.
+
+Watch the rate limits: the 5h/7d percentages in the status line are **per account**, which is why the profile tag sits right next to them.
+
+```sh
+docker volume ls | grep claude-home        # see which accounts exist
+docker volume rm claude-home-work          # log that one account out for good
+```
 
 ### Attaching a shell
 
@@ -119,7 +162,8 @@ The launcher publishes container ports 3000 and 8000 by default, bound to `127.0
 | `CLAUDE_PORT_OFFSET` | Pin the offset instead of searching for a free block |
 | `CLAUDE_NAME` | Pin the container name |
 | `CLAUDE_IMAGE` | Run a different image tag (default `claude-code:latest`) |
-| `CLAUDE_HOME_VOLUME` | Use a different volume for `~/.claude` (default `claude-home`) |
+| `CLAUDE_PROFILE` | Account profile — picks the volume, prefixes the container name, tags the status line (see above) |
+| `CLAUDE_HOME_VOLUME` | Use a specific volume for `~/.claude`, overriding the one `CLAUDE_PROFILE` would pick (default `claude-home`) |
 
 **Note:** The `claude-home` volume persists Claude's environment (login session, settings) across container runs.
 

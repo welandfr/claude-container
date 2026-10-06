@@ -11,22 +11,34 @@
 #   CLAUDE_PORT_OFFSET  use this offset instead of searching
 #   CLAUDE_NO_PORTS=1   publish no ports at all
 #   CLAUDE_NAME         use this container name
-#   CLAUDE_HOME_VOLUME  volume holding ~/.claude          (default: claude-home)
+#   CLAUDE_PROFILE      account profile: selects the volume, prefixes the
+#                       container name, tags the status line (default: none)
+#   CLAUDE_HOME_VOLUME  volume holding ~/.claude  (default: claude-home[-<profile>])
 set -euo pipefail
 
 IMAGE=${CLAUDE_IMAGE:-claude-code:latest}
-HOME_VOLUME=${CLAUDE_HOME_VOLUME:-claude-home}
+PROFILE=${CLAUDE_PROFILE:-}
+# One volume per profile: ~/.claude lives there, so a separate volume means a
+# separate login. An explicit CLAUDE_HOME_VOLUME still wins.
+HOME_VOLUME=${CLAUDE_HOME_VOLUME:-claude-home${PROFILE:+-$PROFILE}}
 MAX_OFFSET=${CLAUDE_MAX_OFFSET:-20}
 read -r -a PORTS <<< "${CLAUDE_PORTS:-3000 8000}"
 
 die()  { printf 'claude: %s\n' "$*" >&2; exit 1; }
 warn() { printf 'claude: %s\n' "$*" >&2; }
 
+# The profile becomes part of a docker volume name and a container name, so
+# reject up front what docker would reject later with an opaque daemon error.
+if [ -n "$PROFILE" ] && ! printf '%s' "$PROFILE" | grep -qE '^[a-zA-Z0-9][a-zA-Z0-9_.-]*$'; then
+  die "invalid CLAUDE_PROFILE '$PROFILE' — letters, digits, '_', '.', '-' only, starting with a letter or digit"
+fi
+
 command -v docker >/dev/null 2>&1 || die "docker not found on PATH"
 
 # --- container name ----------------------------------------------------------
-# claude-<current dir>, with -2, -3, ... appended if that name is taken. Named
-# (rather than left anonymous) so `docker exec` can target a specific instance.
+# claude-[<profile>-]<current dir>, with -2, -3, ... appended if that name is
+# taken. Named (rather than left anonymous) so `docker exec` can target a
+# specific instance, and profile-first so `docker ps` groups by account.
 name_taken() { docker ps -a --format '{{.Names}}' | grep -Fxq -- "$1"; }
 
 name=${CLAUDE_NAME:-}
@@ -34,7 +46,7 @@ if [ -z "$name" ]; then
   slug=$(printf '%s' "${PWD##*/}" \
            | tr '[:upper:]' '[:lower:]' \
            | sed 's/[^a-z0-9_.-]/-/g; s/^[^a-z0-9]*//; s/-\{2,\}/-/g')
-  base="claude-${slug:-workspace}"
+  base="claude${PROFILE:+-$PROFILE}-${slug:-workspace}"
   name=$base
   i=2
   while name_taken "$name"; do
@@ -91,6 +103,12 @@ args=(run --rm -it
       -v "$HOME_VOLUME:/home/node"
       -w /workspace)
 
+# statusline.sh reads this from the container environment to tag the line with
+# the account in use — it is not part of the status JSON Claude sends on stdin.
+if [ -n "$PROFILE" ]; then
+  args+=(-e "CLAUDE_PROFILE=$PROFILE")
+fi
+
 mapping=""
 for p in "${PORTS[@]}"; do
   args+=(-p "127.0.0.1:$((p + offset)):$p")
@@ -103,6 +121,10 @@ if [ -n "$mapping" ]; then
   printf 'claude: %s  ports:%s\n' "$name" "$mapping"
 else
   printf 'claude: %s  (no published ports)\n' "$name"
+fi
+# Only worth a line when it is not the default — otherwise it is noise.
+if [ "$HOME_VOLUME" != claude-home ]; then
+  printf '        volume: %s\n' "$HOME_VOLUME"
 fi
 
 # Two launches racing for the same offset can still collide on `docker run`;

@@ -10,17 +10,39 @@
 #   CLAUDE_PORT_OFFSET  use this offset instead of searching
 #   CLAUDE_NO_PORTS=1   publish no ports at all
 #   CLAUDE_NAME         use this container name
-#   CLAUDE_HOME_VOLUME  volume holding ~/.claude          (default: claude-home)
+#   CLAUDE_PROFILE      account profile: selects the volume, prefixes the
+#                       container name, tags the status line (default: none)
+#   CLAUDE_HOME_VOLUME  volume holding ~/.claude  (default: claude-home[-<profile>])
 
 $ErrorActionPreference = 'Stop'
 
-$image      = if ($env:CLAUDE_IMAGE)       { $env:CLAUDE_IMAGE }       else { 'claude-code:latest' }
-$homeVolume = if ($env:CLAUDE_HOME_VOLUME) { $env:CLAUDE_HOME_VOLUME } else { 'claude-home' }
-$maxOffset  = if ($env:CLAUDE_MAX_OFFSET)  { [int]$env:CLAUDE_MAX_OFFSET } else { 20 }
-$portSpec   = if ($env:CLAUDE_PORTS)       { $env:CLAUDE_PORTS }       else { '3000 8000' }
+# NB: $claudeProfile, not $profile — $profile is a PowerShell automatic variable
+# holding the path to the user's profile script, and clobbering it breaks the session.
+$claudeProfile = if ($env:CLAUDE_PROFILE) { $env:CLAUDE_PROFILE } else { '' }
+
+$image      = if ($env:CLAUDE_IMAGE)      { $env:CLAUDE_IMAGE }           else { 'claude-code:latest' }
+$maxOffset  = if ($env:CLAUDE_MAX_OFFSET) { [int]$env:CLAUDE_MAX_OFFSET } else { 20 }
+$portSpec   = if ($env:CLAUDE_PORTS)      { $env:CLAUDE_PORTS }           else { '3000 8000' }
+
+# One volume per profile: ~/.claude lives there, so a separate volume means a
+# separate login. An explicit CLAUDE_HOME_VOLUME still wins.
+$homeVolume = if ($env:CLAUDE_HOME_VOLUME) {
+    $env:CLAUDE_HOME_VOLUME
+} elseif ($claudeProfile) {
+    "claude-home-$claudeProfile"
+} else {
+    'claude-home'
+}
 
 $ports = @($portSpec -split '\s+' | Where-Object { $_ } | ForEach-Object { [int]$_ })
 if ($env:CLAUDE_NO_PORTS -eq '1') { $ports = @() }
+
+# The profile becomes part of a docker volume name and a container name, so
+# reject up front what docker would reject later with an opaque daemon error.
+if ($claudeProfile -and $claudeProfile -notmatch '^[a-zA-Z0-9][a-zA-Z0-9_.-]*$') {
+    Write-Error "claude: invalid CLAUDE_PROFILE '$claudeProfile' — letters, digits, '_', '.', '-' only, starting with a letter or digit"
+    exit 1
+}
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Error 'claude: docker not found on PATH'
@@ -28,8 +50,9 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
 }
 
 # --- container name ----------------------------------------------------------
-# claude-<current dir>, with -2, -3, ... appended if that name is taken. Named
-# (rather than left anonymous) so `docker exec` can target a specific instance.
+# claude-[<profile>-]<current dir>, with -2, -3, ... appended if that name is
+# taken. Named (rather than left anonymous) so `docker exec` can target a
+# specific instance, and profile-first so `docker ps` groups by account.
 $existing = @(docker ps -a --format '{{.Names}}')
 
 $name = $env:CLAUDE_NAME
@@ -37,7 +60,7 @@ if (-not $name) {
     $slug = (Split-Path -Leaf (Get-Location).Path).ToLower()
     $slug = $slug -replace '[^a-z0-9_.-]', '-' -replace '^[^a-z0-9]+', '' -replace '-{2,}', '-'
     if (-not $slug) { $slug = 'workspace' }
-    $base = "claude-$slug"
+    $base = if ($claudeProfile) { "claude-$claudeProfile-$slug" } else { "claude-$slug" }
     $name = $base
     $i = 2
     while ($existing -contains $name) {
@@ -95,6 +118,12 @@ $dockerArgs = @(
     '-w', '/workspace'
 )
 
+# statusline.sh reads this from the container environment to tag the line with
+# the account in use — it is not part of the status JSON Claude sends on stdin.
+if ($claudeProfile) {
+    $dockerArgs += @('-e', "CLAUDE_PROFILE=$claudeProfile")
+}
+
 $mapping = ''
 foreach ($p in $ports) {
     $dockerArgs += @('-p', "127.0.0.1:$($p + $offset):$p")
@@ -108,6 +137,10 @@ if ($mapping) {
     Write-Host "claude: $name  ports:$mapping"
 } else {
     Write-Host "claude: $name  (no published ports)"
+}
+# Only worth a line when it is not the default — otherwise it is noise.
+if ($homeVolume -ne 'claude-home') {
+    Write-Host "        volume: $homeVolume"
 }
 
 # Two launches racing for the same offset can still collide on `docker run`;
