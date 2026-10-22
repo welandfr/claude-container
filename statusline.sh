@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code status line.
 # Reads the status JSON from stdin and prints a single line, e.g.:
-#   work · Opus 4.8 | Context: 84K/200K (42%) | 5h: 31% ↻2h15m | 7d: 12% ↻3d4h
+#   work · Opus 4.8 | ⎇ main | Context: 84K/200K (42%) | 5h: 31% ↻2h15m | 7d: 12% ↻3d4h
 #
 # The leading account tag comes from CLAUDE_PROFILE in the *environment* (set by
 # claude-run.sh via `docker run -e`), not from the status JSON. When the
@@ -23,13 +23,23 @@ esc=$(printf '\033')   # ESC byte for ANSI colors, injected into jq below
 # object so the baseline ("Claude | Context: ?/? (?%)") still renders.
 [ -z "${input//[[:space:]]/}" ] && input='{}'
 
-out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFILE:-Default}" '
+# Git branch of the session's working directory (the payload's
+# .workspace.current_dir, else our own cwd). Detached HEAD shows the short
+# commit hash; outside a repo the segment is omitted. --no-optional-locks keeps
+# this frequent read-only call from contending with git commands Claude runs.
+dir=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // empty' 2>/dev/null)
+[ -d "$dir" ] || dir=$PWD
+branch=$(git --no-optional-locks -C "$dir" symbolic-ref --short -q HEAD 2>/dev/null \
+  || git --no-optional-locks -C "$dir" rev-parse --short HEAD 2>/dev/null)
+
+out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFILE:-Default}" --arg branch "$branch" '
   # ANSI helpers (status line is rendered dimmed by the terminal).
   def R: $e + "[0m";
   def model_c: $e + "[1;36m";   # bold cyan
   def sep_c:   $e + "[2m";      # dim
   def prof_c:  $e + "[1;35m";   # bold magenta (account tag)
   def dim_c:   $e + "[2m";      # dim (for reset countdown)
+  def branch_c: $e + "[34m";    # blue (git branch)
   # Pick a color for a usage percentage: green < 70, yellow < 90, else red.
   def usage_c(p): if p == null then "" elif p >= 90 then $e + "[31m"
                   elif p >= 70 then $e + "[33m" else $e + "[32m" end;
@@ -76,6 +86,7 @@ out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFIL
   | (sep_c + " | " + R) as $sep
   |   prof_c + $profile + R + sep_c + " · " + R
     + model_c + $m + R
+    + (if $branch != "" then $sep + branch_c + "⎇ " + $branch + R else "" end)
     + $sep + "Context: " + ($used | k) + "/" + ($size | k)
       + " (" + usage_c($cpct) + ($cpct | pct) + "%" + R + ")"
     + (if $h5 != null then
