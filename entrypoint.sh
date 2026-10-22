@@ -22,6 +22,7 @@ CLAUDE_DIR="$HOME/.claude"
 SETTINGS="$CLAUDE_DIR/settings.json"
 STATUSLINE="$CLAUDE_DIR/statusline.sh"
 GLOBAL_CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
+COMMANDS_DIR="$CLAUDE_DIR/commands"
 
 mkdir -p "$CLAUDE_DIR"
 
@@ -30,6 +31,13 @@ mkdir -p "$CLAUDE_DIR"
 # stale per-volume copy. Replaces any pre-existing real file left by older image versions.
 ln -sfn /opt/claude/statusline.sh "$STATUSLINE"
 ln -sfn /opt/claude/CLAUDE.md "$GLOBAL_CLAUDE_MD"
+
+# Same for global slash commands, linked one file at a time so commands the user
+# created directly in the volume are left alone.
+mkdir -p "$COMMANDS_DIR"
+for cmd in /opt/claude/commands/*.md; do
+  [ -e "$cmd" ] && ln -sfn "$cmd" "$COMMANDS_DIR/$(basename "$cmd")"
+done
 
 # Register the status line in settings.json without clobbering other settings.
 if [ ! -f "$SETTINGS" ]; then

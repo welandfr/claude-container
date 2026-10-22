@@ -173,6 +173,8 @@ The launcher publishes container ports 3000 and 8000 by default, bound to `127.0
 
 `CLAUDE.global.md` in this repo is baked into the image and applied to every project as Claude's global `~/.claude/CLAUDE.md`. Edit it here and rebuild to update your preferences across all projects and machines.
 
+Markdown files in `commands/` are installed the same way as global slash commands (e.g. `commands/chat.md` → `/chat`, which answers questions without changing files). Add a file and rebuild to add a command.
+
 ---
 
 ## Updates

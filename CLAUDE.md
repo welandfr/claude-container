@@ -47,5 +47,5 @@ The files that do the work, and their interaction, are the thing to understand:
 
 ## Conventions
 
-- Anything that must survive the volume shadowing `/home/node` belongs in the image at a path outside the volume (the `/opt/claude` + system-wide `/etc/bash.bashrc` pattern), wired up by the entrypoint. Currently: `statusline.sh` and `CLAUDE.global.md` (the global `~/.claude/CLAUDE.md` applied to every project).
+- Anything that must survive the volume shadowing `/home/node` belongs in the image at a path outside the volume (the `/opt/claude` + system-wide `/etc/bash.bashrc` pattern), wired up by the entrypoint. Currently: `statusline.sh`, `CLAUDE.global.md` (the global `~/.claude/CLAUDE.md` applied to every project), and `commands/*.md` (global slash commands, symlinked individually into `~/.claude/commands/`).
 - Security posture is documented in `SECURITY_ASSESSMENT.md` and enforced by the launcher scripts: non-root user, no Docker socket, no `--privileged`, ports bound to `127.0.0.1` only, and the rule to never launch from `$HOME` or any directory holding secrets (the launch dir is fully readable by the container).
