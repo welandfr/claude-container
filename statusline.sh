@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Claude Code status line.
 # Reads the status JSON from stdin and prints a single line, e.g.:
-#   work · Opus 4.8 | ⎇ main | Context: 84K/200K (42%) | 5h: 31% ↻2h15m | 7d: 12% ↻3d4h
+#   work · Opus 4.8 | ⎇ claude-container:main | Context: 84K/200K (42%) | 5h: 31% ↻2h15m | 7d: 12% ↻3d4h
 #
 # The leading account tag comes from CLAUDE_PROFILE in the *environment* (set by
 # claude-run.sh via `docker run -e`), not from the status JSON. When the
-# variable is unset or empty (the single-account default) it reads "Default".
+# variable is unset or empty (the single-account default) the tag is omitted.
 #
 # Schema reference (claude --version 2.x): the JSON on stdin includes
 # .model.display_name, .context_window.{total_input_tokens,context_window_size,
@@ -29,10 +29,24 @@ esc=$(printf '\033')   # ESC byte for ANSI colors, injected into jq below
 # this frequent read-only call from contending with git commands Claude runs.
 dir=$(printf '%s' "$input" | jq -r '.workspace.current_dir // .cwd // empty' 2>/dev/null)
 [ -d "$dir" ] || dir=$PWD
-branch=$(git --no-optional-locks -C "$dir" symbolic-ref --short -q HEAD 2>/dev/null \
-  || git --no-optional-locks -C "$dir" rev-parse --short HEAD 2>/dev/null)
+git_() { git --no-optional-locks -C "$dir" "$@" 2>/dev/null; }
+branch=$(git_ symbolic-ref --short -q HEAD || git_ rev-parse --short HEAD)
 
-out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFILE:-Default}" --arg branch "$branch" '
+# Prefix the branch with the repo name. Inside the container the directory is
+# always /workspace, so the name comes from the remote URL instead: the
+# branch's tracking remote, else origin, else the first remote listed.
+# "git@github.com:me/claude-container.git" -> "claude-container". No remote
+# leaves just the branch.
+if [ -n "$branch" ]; then
+  remote=$(git_ config "branch.$branch.remote")
+  [ -n "$remote" ] || remote=$(git_ remote | grep -qx origin && echo origin)
+  [ -n "$remote" ] || remote=$(git_ remote | head -n1)
+  url=$([ -n "$remote" ] && git_ remote get-url "$remote")
+  url=${url%/}; url=${url%.git}; repo=${url##*[/:]}
+  [ -n "$repo" ] && branch="$repo:$branch"
+fi
+
+out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFILE:-}" --arg branch "$branch" '
   # ANSI helpers (status line is rendered dimmed by the terminal).
   def R: $e + "[0m";
   def model_c: $e + "[1;36m";   # bold cyan
@@ -84,7 +98,7 @@ out=$(printf '%s' "$input" | jq -r --arg e "$esc" --arg profile "${CLAUDE_PROFIL
   | (.rate_limits.five_hour.resets_at | parse_iso | if . then . - now | ceil else null end) as $h5r
   | (.rate_limits.seven_day.resets_at  | parse_iso | if . then . - now | ceil else null end) as $d7r
   | (sep_c + " | " + R) as $sep
-  |   prof_c + $profile + R + sep_c + " · " + R
+  |   (if $profile != "" then prof_c + $profile + R + sep_c + " · " + R else "" end)
     + model_c + $m + R
     + (if $branch != "" then $sep + branch_c + "⎇ " + $branch + R else "" end)
     + $sep + "Context: " + ($used | k) + "/" + ($size | k)
@@ -107,6 +121,6 @@ if [ -z "$out" ]; then
   out="${esc}[1;36m${name}${esc}[0m"
   # Keep the account tag on this path too: it runs exactly when the payload is
   # unreadable, which is no reason to stop saying which account is in use.
-  out="${esc}[1;35m${CLAUDE_PROFILE:-Default}${esc}[0m${esc}[2m · ${esc}[0m${out}"
+  [ -n "$CLAUDE_PROFILE" ] && out="${esc}[1;35m${CLAUDE_PROFILE}${esc}[0m${esc}[2m · ${esc}[0m${out}"
 fi
 printf '%s\n' "$out"
