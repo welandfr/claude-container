@@ -101,7 +101,10 @@ args=(run --rm -it
       --name "$name"
       -v "$PWD:/workspace:z"
       -v "$HOME_VOLUME:/home/node"
-      -w /workspace)
+      -w /workspace
+      # Lets the container reach host services (e.g. a MySQL server) as
+      # host.docker.internal; Docker Desktop provides it, Linux needs this.
+      --add-host=host.docker.internal:host-gateway)
 
 # statusline.sh reads this from the container environment to tag the line with
 # the account in use — it is not part of the status JSON Claude sends on stdin.

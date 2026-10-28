@@ -19,6 +19,7 @@ You are running inside a Docker container. The user's host machine is outside th
 - You cannot run `docker build`, `docker push`, or any Docker commands — Docker is not available inside the container.
 - You cannot push to GitHub — there are no SSH keys in the container. Git commits are fine as long as the user asks you to do it; the user handles all pushes manually from the host.
 - Before committing, check if `git config --global user.name` is set. If not, check the last commit author with `git log -1 --format='%an <%ae>'` and ask the user to confirm using that identity. If there is no git history, ask the user to provide their name and email. Once confirmed, set it with `git config --global` so it persists.
+- Container ports 3000 and 8000 are published to the host (possibly shifted, e.g. 8001). Dev servers must bind `0.0.0.0`, not `localhost`, to be reachable. For PHP, use `php-serve [docroot] [port]` (PHP 8.4 built-in server, default port 8000).
 - Changes to files in `/workspace` are visible to the user immediately (it is a bind mount). Changes outside `/workspace` (e.g. this file) require an image rebuild by the user on the host.
 
 When something requires a Docker rebuild or a git push, tell the user what needs doing rather than attempting it yourself.

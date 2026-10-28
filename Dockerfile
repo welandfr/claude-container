@@ -21,6 +21,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
+# PHP 8.4 from the sury.org repo (bookworm itself only ships 8.2), with
+# pdo_mysql (php8.4-mysql), pdo_sqlite (php8.4-sqlite3) and the extensions
+# Composer packages commonly need.
+RUN curl -fsSL https://packages.sury.org/php/apt.gpg -o /usr/share/keyrings/sury-php.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ bookworm main" \
+      > /etc/apt/sources.list.d/sury-php.list \
+ && apt-get update && apt-get install -y --no-install-recommends \
+    php8.4-cli \
+    php8.4-mysql \
+    php8.4-sqlite3 \
+    php8.4-mbstring \
+    php8.4-xml \
+    php8.4-curl \
+    php8.4-zip \
+    php8.4-intl \
+ && rm -rf /var/lib/apt/lists/*
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code
 
@@ -38,7 +56,8 @@ COPY statusline.sh /opt/claude/statusline.sh
 COPY CLAUDE.global.md /opt/claude/CLAUDE.md
 COPY commands/ /opt/claude/commands/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /opt/claude/statusline.sh /usr/local/bin/entrypoint.sh
+COPY php-serve.sh /usr/local/bin/php-serve
+RUN chmod +x /opt/claude/statusline.sh /usr/local/bin/entrypoint.sh /usr/local/bin/php-serve
 
 
 WORKDIR /workspace

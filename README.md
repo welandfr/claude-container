@@ -165,6 +165,20 @@ The launcher publishes container ports 3000 and 8000 by default, bound to `127.0
 | `CLAUDE_PROFILE` | Account profile — picks the volume, prefixes the container name, tags the status line (see above) |
 | `CLAUDE_HOME_VOLUME` | Use a specific volume for `~/.claude`, overriding the one `CLAUDE_PROFILE` would pick (default `claude-home`) |
 
+### PHP
+
+The image includes PHP 8.4 (with `pdo_mysql`, `pdo_sqlite`, `mbstring`, `xml`, `curl`, `zip`, `intl`) and Composer. To serve a project on the default-published port 8000:
+
+```sh
+php-serve              # current directory on port 8000
+php-serve public       # docroot ./public
+php-serve public 3000  # docroot ./public on port 3000
+```
+
+Open `http://localhost:8000` on the host — or the shifted port (8001, …) the launcher printed if several instances are running. The server binds `0.0.0.0` inside the container, which docker's port publishing requires; the host side stays limited to `127.0.0.1`.
+
+To reach a database on the host, use `host.docker.internal` as the hostname (e.g. `mysql:host=host.docker.internal;dbname=app`) — `localhost` inside the container is the container itself. The host's MySQL must listen on an address the container can reach (not only `127.0.0.1`; e.g. `bind-address = 0.0.0.0` or the docker bridge IP) and allow the user to connect from that address.
+
 **Note:** The `claude-home` volume persists Claude's environment (login session, settings) across container runs.
 
 ---

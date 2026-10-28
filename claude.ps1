@@ -115,7 +115,10 @@ $dockerArgs = @(
     '--name', $name,
     '-v', "$((Get-Location).Path):/workspace",
     '-v', "${homeVolume}:/home/node",
-    '-w', '/workspace'
+    '-w', '/workspace',
+    # Lets the container reach host services (e.g. a MySQL server) as
+    # host.docker.internal; Docker Desktop provides it already, this makes it explicit.
+    '--add-host=host.docker.internal:host-gateway'
 )
 
 # statusline.sh reads this from the container environment to tag the line with
