@@ -32,7 +32,9 @@
       "Bash(jq --version)",
       "Bash(bash /workspace/statusline.sh)",
       "Read(//usr/local/lib/node_modules/@anthropic-ai/claude-code/**)",
-      "Read(//opt/claude/**)"
+      "Read(//opt/claude/**)",
+      "Bash(bash -n entrypoint.sh)",
+      "Bash(bash -c 'set -e; for c in /nonexistent/*.md; do [ -e \"$c\" ] && echo hi; done; echo survived')"
     ]
   }
 }
