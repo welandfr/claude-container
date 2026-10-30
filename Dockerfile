@@ -59,6 +59,15 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY php-serve.sh /usr/local/bin/php-serve
 RUN chmod +x /opt/claude/statusline.sh /usr/local/bin/entrypoint.sh /usr/local/bin/php-serve
 
+# GitHub SSH: which key to use, and GitHub's pinned host key (from
+# https://api.github.com/meta), so the first push doesn't have to trust on first
+# use. The key itself is per-volume, created by the entrypoint.
+COPY ssh_config /etc/ssh/ssh_config.d/claude-agent.conf
+RUN echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" >> /etc/ssh/ssh_known_hosts
+
+# Fail a commit in a repo with no identity, instead of guessing one from the
+# hostname. The author is chosen per project in the repo's own config.
+RUN git config --system user.useConfigOnly true
 
 WORKDIR /workspace
 

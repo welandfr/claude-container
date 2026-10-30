@@ -50,4 +50,27 @@ if ! jq -e '.statusLine' "$SETTINGS" >/dev/null 2>&1; then
      "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
 fi
 
+# Give this volume its own SSH key for pushing to GitHub. It grants nothing until
+# its public half is added to the agent's GitHub account, so each volume opts in
+# separately. Instances share the volume and may race here: the hard link fails
+# for all but one of them, so a simultaneous first run still ends with one key.
+SSH_DIR="$HOME/.ssh"
+SSH_KEY="$SSH_DIR/id_ed25519_agent"
+if [ ! -f "$SSH_KEY" ]; then
+  mkdir -p -m 700 "$SSH_DIR"
+  tmp=$(mktemp -d "$SSH_DIR/.keygen.XXXXXX")
+  ssh-keygen -q -t ed25519 -N '' -C "claude-agent${CLAUDE_PROFILE:+-$CLAUDE_PROFILE}" -f "$tmp/key"
+  if ln "$tmp/key" "$SSH_KEY" 2>/dev/null; then
+    mv "$tmp/key.pub" "$SSH_KEY.pub"
+    printf '\nNew SSH key for this volume. To allow git push, add it to the agent GitHub account:\n\n%s\n\n' "$(cat "$SSH_KEY.pub")"
+    printf 'Show it again with: cat ~/.ssh/id_ed25519_agent.pub\n'
+    # Claude's interface takes over the terminal next, so hold the key on screen.
+    if [ -t 0 ]; then
+      printf 'Press Enter to continue. '
+      read -r _
+    fi
+  fi
+  rm -rf "$tmp"
+fi
+
 exec claude "$@"

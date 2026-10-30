@@ -151,6 +151,22 @@ docker ps --format '{{.Names}}\t{{.Ports}}'
 docker exec -it claude-my-project /bin/bash
 ```
 
+### Pushing to GitHub
+
+The first start on a volume creates an SSH key at `~/.ssh/id_ed25519_agent` and prints the public key. It has no access until you allow it:
+
+1. Add the public key to a separate GitHub account for the agent. Each volume (profile) has its own key, so repeat this per profile you want to be able to push.
+2. Invite that account as a collaborator on each repo it may push to.
+3. Check it from inside the container: `ssh -T git@github.com` greets the agent account.
+
+`git@github.com:` remotes need no changes: the host keeps using your key and the container uses this one. To revoke, remove the collaborator for one repo or delete the key on GitHub for all of them. Deleting the volume deletes the private key, and the next start makes a new one, so also remove the old key from GitHub.
+
+The key has no passphrase and anything running in the container can read it, including dependency install scripts. A `main`/tag ruleset limits what a leaked key can do (on private personal repos, rulesets require GitHub Pro).
+
+Commits use the author set in the repo's `.git/config`, which the host shares. Claude asks which identity to use the first time it commits in a repo that has none. The agent account only appears as the pusher, in the repo's Activity view.
+
+Project remotes that use a host alias need a matching entry in the volume's `~/.ssh/config`.
+
 ### Ports
 
 The launcher publishes container ports 3000 and 8000 by default, bound to `127.0.0.1` so the services are only reachable from your own machine. Override per project or globally with environment variables:

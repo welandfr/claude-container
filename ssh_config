@@ -1,0 +1,9 @@
+# Installed as /etc/ssh/ssh_config.d/claude-agent.conf, outside the volume.
+# The per-volume key is created by entrypoint.sh. Only the container resolves
+# github.com to this key, so git@github.com: remotes in a project's .git/config
+# work unchanged on both host and container.
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_agent
+  IdentitiesOnly yes

@@ -17,9 +17,9 @@ Do not write or edit any code until you have 95% confidence in what needs to be 
 You are running inside a Docker container. The user's host machine is outside the container. This means:
 
 - You cannot run `docker build`, `docker push`, or any Docker commands — Docker is not available inside the container.
-- You cannot push to GitHub — there are no SSH keys in the container. Git commits are fine as long as the user asks you to do it; the user handles all pushes manually from the host.
-- Before committing, check if `git config --global user.name` is set. If not, check the last commit author with `git log -1 --format='%an <%ae>'` and ask the user to confirm using that identity. If there is no git history, ask the user to provide their name and email. Once confirmed, set it with `git config --global` so it persists.
+- Git commits are fine as long as the user asks you to do it. You may push to repos where the agent GitHub account is a collaborator, only when asked; confirm before pushing tags. If a push is rejected for lack of access, tell the user rather than working around it — they may need to add this volume's key (`~/.ssh/id_ed25519_agent.pub`) or invite the account.
+- Before committing, check `git config --local user.email`. If it is not set, ask the user which identity to use as author for this project, then set it with `git config --local user.name` and `user.email`. Never set an identity globally: git is configured to refuse commits with no identity, so that the question gets asked.
 - Container ports 3000 and 8000 are published to the host (possibly shifted, e.g. 8001). Dev servers must bind `0.0.0.0`, not `localhost`, to be reachable. For PHP, use `php-serve [docroot] [port]` (PHP 8.4 built-in server, default port 8000).
 - Changes to files in `/workspace` are visible to the user immediately (it is a bind mount). Changes outside `/workspace` (e.g. this file) require an image rebuild by the user on the host.
 
-When something requires a Docker rebuild or a git push, tell the user what needs doing rather than attempting it yourself.
+When something requires a Docker rebuild, tell the user what needs doing rather than attempting it yourself.
