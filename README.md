@@ -195,6 +195,10 @@ Open `http://localhost:8000` on the host — or the shifted port (8001, …) the
 
 To reach a database on the host, use `host.docker.internal` as the hostname (e.g. `mysql:host=host.docker.internal;dbname=app`) — `localhost` inside the container is the container itself. The host's MySQL must listen on an address the container can reach (not only `127.0.0.1`; e.g. `bind-address = 0.0.0.0` or the docker bridge IP) and allow the user to connect from that address.
 
+### Audio
+
+The image includes `ffmpeg` and LilyPond (`lilypond`, plus `abc2ly` and `musicxml2ly` for converting ABC/MusicXML). Heavier Python tools such as `basic-pitch` or `openai-whisper` are not baked in — they pull TensorFlow/PyTorch — so install them in a venv when needed.
+
 **Note:** The `claude-home` volume persists Claude's environment (login session, settings) across container runs.
 
 ---

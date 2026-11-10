@@ -21,6 +21,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
+# Audio: ffmpeg for decoding/converting, LilyPond for rendering notation to PDF
+# (ships abc2ly/musicxml2ly converters). Python ML tools (basic-pitch, whisper)
+# are deliberately not baked in; install them per session in a venv.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    lilypond \
+ && rm -rf /var/lib/apt/lists/*
+
 # PHP 8.4 from the sury.org repo (bookworm itself only ships 8.2), with
 # pdo_mysql (php8.4-mysql), pdo_sqlite (php8.4-sqlite3) and the extensions
 # Composer packages commonly need.
