@@ -4,7 +4,11 @@
 # host ports, so several instances can run side by side. All arguments are
 # passed through to `claude` inside the container.
 #
+# Works with Docker or Podman (rootless or rootful).
+#
 # Env overrides:
+#   CLAUDE_ENGINE       container CLI to use: docker or podman
+#                       (default: docker if on PATH, else podman)
 #   CLAUDE_IMAGE        image to run                      (default: claude-code:latest)
 #   CLAUDE_PORTS        container ports to publish        (default: "3000 8000")
 #   CLAUDE_PORT_OFFSET  use this offset instead of searching
@@ -44,16 +48,30 @@ if ($claudeProfile -and $claudeProfile -notmatch '^[a-zA-Z0-9][a-zA-Z0-9_.-]*$')
     exit 1
 }
 
-if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    Write-Error 'claude: docker not found on PATH'
+# --- container engine --------------------------------------------------------
+# Docker first so existing setups are unchanged; podman when docker is absent.
+# Identify podman by its version string rather than its name, so a `docker`
+# that is really podman is handled too.
+$engine = $env:CLAUDE_ENGINE
+if (-not $engine) {
+    if (Get-Command docker -ErrorAction SilentlyContinue)     { $engine = 'docker' }
+    elseif (Get-Command podman -ErrorAction SilentlyContinue) { $engine = 'podman' }
+    else {
+        Write-Error 'claude: neither docker nor podman found on PATH'
+        exit 1
+    }
+}
+if (-not (Get-Command $engine -ErrorAction SilentlyContinue)) {
+    Write-Error "claude: $engine not found on PATH"
     exit 1
 }
+$isPodman = "$(& $engine --version 2>$null)" -match 'podman'
 
 # --- container name ----------------------------------------------------------
 # claude-[<profile>-]<current dir>, with -2, -3, ... appended if that name is
 # taken. Named (rather than left anonymous) so `docker exec` can target a
 # specific instance, and profile-first so `docker ps` groups by account.
-$existing = @(docker ps -a --format '{{.Names}}')
+$existing = @(& $engine ps -a --format '{{.Names}}')
 
 $name = $env:CLAUDE_NAME
 if (-not $name) {
@@ -70,7 +88,8 @@ if (-not $name) {
 }
 
 # --- host port offset --------------------------------------------------------
-# Published docker ports hold a listening socket on the host, so enumerating
+# Published ports hold a listening socket on the host (docker's proxy, or
+# podman's port forwarder), so enumerating
 # listeners is enough to spot a block already claimed by another instance.
 $busy = $null
 if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
@@ -115,11 +134,25 @@ $dockerArgs = @(
     '--name', $name,
     '-v', "$((Get-Location).Path):/workspace",
     '-v', "${homeVolume}:/home/node",
-    '-w', '/workspace',
+    '-w', '/workspace'
+)
+
+if ($isPodman) {
+    # Podman already maps host.containers.internal (and, from 5.x,
+    # host.docker.internal) to the host; older podman rejects host-gateway.
+    #
+    # A rootless podman machine maps the host user to root inside the container,
+    # so the project mount would be unwritable for `node`. keep-id maps it onto
+    # node's uid/gid instead (needs podman >= 4.3). Rootful refuses keep-id and
+    # needs nothing.
+    if ("$(& $engine info --format '{{.Host.Security.Rootless}}' 2>$null)".Trim() -eq 'true') {
+        $dockerArgs += '--userns=keep-id:uid=1000,gid=1000'
+    }
+} else {
     # Lets the container reach host services (e.g. a MySQL server) as
     # host.docker.internal; Docker Desktop provides it already, this makes it explicit.
-    '--add-host=host.docker.internal:host-gateway'
-)
+    $dockerArgs += '--add-host=host.docker.internal:host-gateway'
+}
 
 # statusline.sh reads this from the container environment to tag the line with
 # the account in use — it is not part of the status JSON Claude sends on stdin.
@@ -148,5 +181,5 @@ if ($homeVolume -ne 'claude-home') {
 
 # Two launches racing for the same offset can still collide on `docker run`;
 # re-running picks the next free block.
-& docker @dockerArgs
+& $engine @dockerArgs
 exit $LASTEXITCODE

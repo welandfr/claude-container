@@ -5,7 +5,11 @@
 # host ports, so several instances can run side by side. All arguments are
 # passed through to `claude` inside the container.
 #
+# Works with Docker or Podman (rootless or rootful).
+#
 # Env overrides:
+#   CLAUDE_ENGINE       container CLI to use: docker or podman
+#                       (default: docker if on PATH, else podman)
 #   CLAUDE_IMAGE        image to run                      (default: claude-code:latest)
 #   CLAUDE_PORTS        container ports to publish        (default: "3000 8000")
 #   CLAUDE_PORT_OFFSET  use this offset instead of searching
@@ -33,13 +37,26 @@ if [ -n "$PROFILE" ] && ! printf '%s' "$PROFILE" | grep -qE '^[a-zA-Z0-9][a-zA-Z
   die "invalid CLAUDE_PROFILE '$PROFILE' — letters, digits, '_', '.', '-' only, starting with a letter or digit"
 fi
 
-command -v docker >/dev/null 2>&1 || die "docker not found on PATH"
+# --- container engine --------------------------------------------------------
+# Docker first so existing setups are unchanged; podman when docker is absent.
+# Identify podman by its version string rather than its name, so the
+# podman-docker shim (a `docker` that is really podman) is handled too.
+ENGINE=${CLAUDE_ENGINE:-}
+if [ -z "$ENGINE" ]; then
+  if command -v docker >/dev/null 2>&1; then ENGINE=docker
+  elif command -v podman >/dev/null 2>&1; then ENGINE=podman
+  else die "neither docker nor podman found on PATH"
+  fi
+fi
+command -v "$ENGINE" >/dev/null 2>&1 || die "$ENGINE not found on PATH"
+IS_PODMAN=0
+if "$ENGINE" --version 2>/dev/null | grep -qi podman; then IS_PODMAN=1; fi
 
 # --- container name ----------------------------------------------------------
 # claude-[<profile>-]<current dir>, with -2, -3, ... appended if that name is
 # taken. Named (rather than left anonymous) so `docker exec` can target a
 # specific instance, and profile-first so `docker ps` groups by account.
-name_taken() { docker ps -a --format '{{.Names}}' | grep -Fxq -- "$1"; }
+name_taken() { "$ENGINE" ps -a --format '{{.Names}}' | grep -Fxq -- "$1"; }
 
 name=${CLAUDE_NAME:-}
 if [ -z "$name" ]; then
@@ -56,7 +73,8 @@ if [ -z "$name" ]; then
 fi
 
 # --- host port offset --------------------------------------------------------
-# Published docker ports hold a listening socket on the host, so enumerating
+# Published ports hold a listening socket on the host (dockerd/docker-proxy, or
+# podman's conmon/rootlessport/pasta), so enumerating
 # listeners is enough to spot a block already claimed by another instance.
 BUSY=""
 BUSY_SOURCE=none
@@ -101,10 +119,25 @@ args=(run --rm -it
       --name "$name"
       -v "$PWD:/workspace:z"
       -v "$HOME_VOLUME:/home/node"
-      -w /workspace
-      # Lets the container reach host services (e.g. a MySQL server) as
-      # host.docker.internal; Docker Desktop provides it, Linux needs this.
-      --add-host=host.docker.internal:host-gateway)
+      -w /workspace)
+
+if [ "$IS_PODMAN" = 1 ]; then
+  # Podman already maps host.containers.internal (and, from 5.x,
+  # host.docker.internal) to the host; older podman rejects host-gateway.
+  #
+  # Rootless podman maps the host user to root inside the container, so the
+  # bind-mounted project would be root-owned and unwritable for `node`. keep-id
+  # maps the host user onto node's uid/gid instead (needs podman >= 4.3).
+  # Rootful podman refuses keep-id and needs nothing: uids pass through as with
+  # docker.
+  if [ "$("$ENGINE" info --format '{{.Host.Security.Rootless}}' 2>/dev/null)" = true ]; then
+    args+=(--userns=keep-id:uid=1000,gid=1000)
+  fi
+else
+  # Lets the container reach host services (e.g. a MySQL server) as
+  # host.docker.internal; Docker Desktop provides it, Linux needs this.
+  args+=(--add-host=host.docker.internal:host-gateway)
+fi
 
 # statusline.sh reads this from the container environment to tag the line with
 # the account in use — it is not part of the status JSON Claude sends on stdin.
@@ -132,4 +165,4 @@ fi
 
 # Two launches racing for the same offset can still collide on `docker run`;
 # re-running picks the next free block.
-exec docker "${args[@]}"
+exec "$ENGINE" "${args[@]}"

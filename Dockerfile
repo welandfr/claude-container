@@ -1,4 +1,6 @@
-FROM node:22-bookworm-slim
+# Base images are fully qualified (docker.io/...) because podman/buildah refuse
+# or prompt on unqualified short names; docker accepts either form.
+FROM docker.io/library/node:22-bookworm-slim
 
 USER root
 
@@ -45,7 +47,7 @@ RUN curl -fsSL https://packages.sury.org/php/apt.gpg -o /usr/share/keyrings/sury
     php8.4-zip \
     php8.4-intl \
  && rm -rf /var/lib/apt/lists/*
-COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+COPY --from=docker.io/library/composer:2 /usr/bin/composer /usr/local/bin/composer
 
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code

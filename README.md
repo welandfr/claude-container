@@ -1,6 +1,6 @@
 # Containerized Claude Code
 
-Run Claude Code inside a Docker container, isolated from the rest of your machine. The container can only see the directory you launch it from.
+Run Claude Code inside a container, isolated from the rest of your machine. The container can only see the directory you launch it from. Works with Docker or Podman (see [Podman](#podman)).
 
 > **Security:** The directory you start in is the *only* thing the container can access. Never launch from `$HOME` or any folder holding credentials, SSH keys, or other secrets — launch from a dedicated project directory.
 
@@ -23,11 +23,13 @@ cd claude-container
 docker build -t claude-code:latest .
 ```
 
-Or use the included build script:
+Or use the included build script, which uses docker, or podman if docker is not installed:
 
 ```sh
 ./build.sh
 ```
+
+With Podman, replace `docker` with `podman` in the commands in this README.
 
 **3. Add an alias** to your `~/.bashrc`, `~/.zshrc`, or equivalent, pointing at the launcher script in this repo:
 
@@ -177,6 +179,7 @@ The launcher publishes container ports 3000 and 8000 by default, bound to `127.0
 | `CLAUDE_NO_PORTS=1` | Publish nothing |
 | `CLAUDE_PORT_OFFSET` | Pin the offset instead of searching for a free block |
 | `CLAUDE_NAME` | Pin the container name |
+| `CLAUDE_ENGINE` | `docker` or `podman` (default: docker if installed, else podman) |
 | `CLAUDE_IMAGE` | Run a different image tag (default `claude-code:latest`) |
 | `CLAUDE_PROFILE` | Account profile — picks the volume, prefixes the container name, tags the status line (see above) |
 | `CLAUDE_HOME_VOLUME` | Use a specific volume for `~/.claude`, overriding the one `CLAUDE_PROFILE` would pick (default `claude-home`) |
@@ -195,11 +198,24 @@ Open `http://localhost:8000` on the host — or the shifted port (8001, …) the
 
 To reach a database on the host, use `host.docker.internal` as the hostname (e.g. `mysql:host=host.docker.internal;dbname=app`) — `localhost` inside the container is the container itself. The host's MySQL must listen on an address the container can reach (not only `127.0.0.1`; e.g. `bind-address = 0.0.0.0` or the docker bridge IP) and allow the user to connect from that address.
 
+With Podman, use `host.containers.internal`. Podman 5 also provides `host.docker.internal`; older versions do not.
+
 ### Audio
 
 The image includes `ffmpeg` and LilyPond (`lilypond`, plus `abc2ly` and `musicxml2ly` for converting ABC/MusicXML). Heavier Python tools such as `basic-pitch` or `openai-whisper` are not baked in — they pull TensorFlow/PyTorch — so install them in a venv when needed.
 
 **Note:** The `claude-home` volume persists Claude's environment (login session, settings) across container runs.
+
+### Podman
+
+The launchers use docker when it is installed and podman otherwise. Set `CLAUDE_ENGINE=podman` to use podman when both are installed. A `docker` command that is really podman (the `podman-docker` package) is detected as podman.
+
+Under podman the launcher changes two things:
+
+- **Rootless podman** maps your host user to root inside the container, which would leave the project directory unwritable for the container's `node` user. The launcher adds `--userns=keep-id:uid=1000,gid=1000` so your files appear owned by `node` (needs podman 4.3 or newer). Rootful podman doesn't need this and gets nothing extra.
+- `--add-host=host.docker.internal:host-gateway` is left out, because podman adds its own host entries and podman before 5.3 rejects `host-gateway`.
+
+Docker and podman keep separate image and volume stores. Build the image with the engine you'll run it with. A `claude-home` volume made under one engine is not visible to the other, so the first podman run asks you to log in again.
 
 ---
 
